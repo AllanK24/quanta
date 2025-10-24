@@ -94,7 +94,9 @@ class QuanTAModel(torch.nn.Module):
                 elif isinstance(target, torch.nn.Linear) and self.peft_config.enable_lora is None:
                     new_module = Linear(target.in_features, target.out_features, bias=bias, **kwargs)
                 elif self.peft_config.enable_lora is not None:
-                    raise NotImplementedError
+                    # UPDATE HERE
+                    self.peft_config.enable_lora = None
+                    new_module = Linear(target.in_features, target.out_features, bias=bias, **kwargs)
                 self._replace_module(parent, target_name, new_module, target)
         if not is_target_modules_in_base_model:
             raise ValueError(f"Target modules {self.peft_config.target_modules} not found in the base model. "
