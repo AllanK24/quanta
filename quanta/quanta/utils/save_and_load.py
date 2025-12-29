@@ -29,8 +29,9 @@ def get_peft_model_state_dict(model, state_dict=None):
         will be used.
     """
     if state_dict is None:
-        state_dict = model.state_dict()
+        state_dict = model.state_dict() 
     if model.peft_config.peft_type == PeftType.LORA:
+        print("get_peft_model_state_dict: Lora block activated!")
         # to_return = lora_state_dict(model, bias=model.peft_config.bias)
         # adapted from `https://github.com/microsoft/LoRA/blob/main/loralib/utils.py`
         # to directly with the state dict which is necessary when using DeepSpeed or FSDP
@@ -49,24 +50,8 @@ def get_peft_model_state_dict(model, state_dict=None):
                         to_return[bias_name] = state_dict[bias_name]
         else:
             raise NotImplementedError
-    elif model.peft_config.peft_type == PeftType.BOTTLENECK:
-        # return the state dict of the model with Bottleneck adapters
-        bias = model.peft_config.bias
-        if bias == "none":
-            to_return = {k: state_dict[k] for k in state_dict if "adapter_" in k}
-        elif bias == "all":
-            to_return = {k: state_dict[k] for k in state_dict if "adapter_" in k or "bias" in k}
-        elif bias == "adapter_only":
-            to_return = {}
-            for k in state_dict:
-                if "adapter_" in k:
-                    to_return[k] = state_dict[k]
-                    bias_name = k.split("adapter_")[0] + "bias"
-                    if bias_name in state_dict:
-                        to_return[bias_name] = state_dict[bias_name]
-        else:
-            raise NotImplementedError
     elif model.peft_config.peft_type == PeftType.QUANTA:
+        print("get_peft_model_state_dict: QuanTA block activated!")
         # return the state dict of the model with QuanTA adapters
         bias = model.peft_config.bias
         if bias == "none":
@@ -83,13 +68,35 @@ def get_peft_model_state_dict(model, state_dict=None):
                         to_return[bias_name] = state_dict[bias_name]
         else:
             raise NotImplementedError
-    else:
+    elif model.peft_config.peft_type == PeftType.BOTTLENECK:
+        print("get_peft_model_state_dict: Bottleneck block activated!")
+        # return the state dict of the model with Bottleneck adapters
+        bias = model.peft_config.bias
+        if bias == "none":
+            to_return = {k: state_dict[k] for k in state_dict if "adapter_" in k}
+        elif bias == "all":
+            to_return = {k: state_dict[k] for k in state_dict if "adapter_" in k or "bias" in k}
+        elif bias == "adapter_only":
+            to_return = {}
+            for k in state_dict:
+                if "adapter_" in k:
+                    to_return[k] = state_dict[k]
+                    bias_name = k.split("adapter_")[0] + "bias"
+                    if bias_name in state_dict:
+                        to_return[bias_name] = state_dict[bias_name]
+        else:
+            raise NotImplementedError
+    elif model.peft_config.peft_type in (PeftType.PROMPT_TUNING, PeftType.P_TUNING, PeftType.PREFIX_TUNING):
+        print("get_peft_model_state_dict: PROMPT_TUNING, P_TUNING, PREFIX_TUNING block activated!")
+        # Handle prompt learning methods
         to_return = {}
         if model.peft_config.inference_mode:
             prompt_embeddings = model.prompt_encoder.embedding.weight
         else:
             prompt_embeddings = model.get_prompt_embedding_to_save()
         to_return["prompt_embeddings"] = prompt_embeddings
+    else:
+        raise NotImplementedError(f"Unknown peft_type: {model.peft_config.peft_type}")
     if model.modules_to_save is not None:
         for key, value in state_dict.items():
             if any(module_name in key for module_name in model.modules_to_save):
