@@ -20,7 +20,13 @@
 __version__ = "0.0.1"
 
 from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING, get_peft_config, get_peft_model
-
+from .peft_model import (
+    PeftModel,
+    PeftModelForCausalLM,
+    PeftModelForSeq2SeqLM,
+    PeftModelForSequenceClassification,
+    PeftModelForTokenClassification,
+)
 
 from .tuners import (
     QuanTAConfig,
